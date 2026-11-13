@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><title>Agendamentos — Barbearia da Cacau</title></head>
+<body>
+<div class="layout">
+  <aside class="menu" id="menu"></aside>
+  <main>
+    <div class="topo"><div><h1>Agendamentos</h1><p>Todos os atendimentos, por dia e horário.</p></div>
+      <button class="btn" id="novo" type="button">Novo agendamento</button></div>
+    <section class="painel"><div class="rolagem"><table>
+      <thead><tr><th>Quando</th><th>Cliente</th><th>Serviço</th><th>Barbeiro</th><th>Status</th><th></th></tr></thead>
+      <tbody id="lista"></tbody>
+    </table></div></section>
+  </main>
+</div>
+
+<dialog id="dlg">
+  <form id="form" novalidate>
+    <h2>Novo agendamento</h2>
+    <label for="cliente">Cliente</label><select id="cliente" required></select>
+    <label for="servico">Serviço</label><select id="servico" required></select>
+    <label for="barbeiro">Barbeiro</label><select id="barbeiro" required></select>
+    <p class="dica">Ao escolher o serviço, o barbeiro responsável é selecionado automaticamente.</p>
+    <div class="linha-2">
+      <div><label for="data">Data</label><input id="data" type="date" required></div>
+      <div><label for="hora">Hora</label><input id="hora" type="time" step="900" required></div>
+    </div>
+    <div class="msg-erro" id="erro" role="alert"></div>
+    <div class="dialogo-acoes"><button class="btn sec" type="button" id="cancelar">Cancelar</button><button class="btn" type="submit">Agendar</button></div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+<script>
+let servs = [];
+
+async function carregar() {
+  const lista = await api('/api/agendamentos');
+  document.getElementById('lista').innerHTML = lista.length ? lista.map((a) =>
+    '<tr><td><span class="dia">' + esc(dataBR(a.data)) + '</span><span class="sub-linha">' + a.hora + '</span></td>' +
+    '<td>' + esc(a.cliente) + '<span class="sub-linha">' + esc(a.cliente_telefone) + '</span></td>' +
+    '<td>' + esc(a.servico) + '<span class="sub-linha">' + dinheiro(a.preco) + ' · ' + a.duracao_min + ' min</span></td>' +
+    '<td>' + esc(a.barbeiro) + '</td><td><span class="selo ' + a.status + '">' + a.status + '</span></td>' +
+    '<td class="acoes">' + (a.status === 'Agendado'
+      ? '<button class="btn ok mini" data-s="Concluído" data-id="' + a.id + '">Concluir</button><button class="btn sec mini" data-s="Cancelado" data-id="' + a.id + '">Cancelar</button>' : '') +
+    '<button class="btn perigo mini" data-x="' + a.id + '">Excluir</button></td></tr>').join('')
+    : '<tr><td colspan="6" class="vazio">Nenhum agendamento ainda.</td></tr>';
+}
+
+async function abrir() {
+  const [cl, br] = await Promise.all([api('/api/clientes'), api('/api/barbeiros')]);
+  servs = await api('/api/servicos');
+  cliente.innerHTML = '<option value="">Selecione…</option>' + cl.map((c) => '<option value="' + c.id + '">' + esc(c.nome) + '</option>').join('');
+  servico.innerHTML = '<option value="">Selecione…</option>' + servs.map((s) => '<option value="' + s.id + '">' + esc(s.nome) + ' — ' + dinheiro(s.preco) + '</option>').join('');
+  barbeiro.innerHTML = '<option value="">Selecione…</option>' + br.map((b) => '<option value="' + b.id + '">' + esc(b.nome) + '</option>').join('');
+  data.value = ''; hora.value = ''; erro.textContent = '';
+  dlg.showModal();
+}
+
+if (iniciar('agendamentos.html')) {
+  carregar().catch((e) => aviso(e.message, true));
+  novo.onclick = () => abrir().catch((e) => aviso(e.message, true));
+  cancelar.onclick = () => dlg.close();
+  servico.onchange = () => { const s = servs.find((x) => x.id == servico.value); if (s) barbeiro.value = s.barbeiro_id; };
+
+  lista.onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    try {
+      if (b.dataset.s) { await api('/api/agendamentos/' + b.dataset.id + '/status', 'PATCH', { status: b.dataset.s }); aviso('Status atualizado.'); }
+      if (b.dataset.x) { if (!confirm('Excluir este agendamento?')) return; await api('/api/agendamentos/' + b.dataset.x, 'DELETE'); aviso('Agendamento excluído.'); }
+      carregar();
+    } catch (err) { aviso(err.message, true); }
+  };
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api('/api/agendamentos', 'POST', { cliente_id: cliente.value, servico_id: servico.value, barbeiro_id: barbeiro.value, data: data.value, hora: hora.value });
+      dlg.close(); aviso('Agendamento criado.'); carregar();
+    } catch (err) { erro.textContent = err.message; }
+  };
+}
+</script>
+</body>
+</html>

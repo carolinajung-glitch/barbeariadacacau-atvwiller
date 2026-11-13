@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><title>Clientes — Barbearia da Cacau</title></head>
+<body>
+<div class="layout">
+  <aside class="menu" id="menu"></aside>
+  <main>
+    <div class="topo"><div><h1>Clientes</h1><p>Cadastro e consulta de clientes.</p></div>
+      <button class="btn" id="novo" type="button">Novo cliente</button></div>
+    <section class="painel">
+      <form class="busca" id="busca">
+        <input id="q" type="search" placeholder="Buscar por nome, telefone ou e-mail" aria-label="Buscar clientes">
+        <button class="btn" type="submit">Buscar</button>
+        <button class="btn sec" type="button" id="limpar">Limpar</button>
+      </form>
+    </section>
+    <section class="painel"><div class="rolagem"><table>
+      <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>E-mail</th><th></th></tr></thead>
+      <tbody id="lista"></tbody>
+    </table></div></section>
+  </main>
+</div>
+<dialog id="dlg">
+  <form id="form" novalidate>
+    <h2 id="titulo">Novo cliente</h2>
+    <label for="nome">Nome</label><input id="nome" required>
+    <label for="cpf">CPF</label><input id="cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
+    <p class="dica" id="dicaCpf"></p>
+    <div class="linha-2">
+      <div><label for="telefone">Telefone</label><input id="telefone" required placeholder="(48) 99999-0000"></div>
+      <div><label for="email">E-mail</label><input id="email" type="email"></div>
+    </div>
+    <div class="msg-erro" id="erro" role="alert"></div>
+    <div class="dialogo-acoes"><button class="btn sec" type="button" id="cancelar">Cancelar</button><button class="btn" type="submit">Salvar cliente</button></div>
+  </form>
+</dialog>
+<script src="app.js"></script>
+<script>
+let editando = null, termo = '';
+const dlg = document.getElementById('dlg');
+
+async function carregar() {
+  const lista = await api('/api/clientes' + (termo ? '?q=' + encodeURIComponent(termo) : ''));
+  document.getElementById('lista').innerHTML = lista.length
+    ? lista.map((c) => '<tr><td>' + esc(c.nome) + '</td><td>' + esc(c.cpf) + '</td><td>' + esc(c.telefone) + '</td><td>' + esc(c.email || '—') +
+        '</td><td class="acoes"><button class="btn sec mini" data-e="' + c.id + '">Editar</button><button class="btn perigo mini" data-x="' + c.id + '">Excluir</button></td></tr>').join('')
+    : '<tr><td colspan="5" class="vazio">' + (termo ? 'Nenhum cliente encontrado para "' + esc(termo) + '".' : 'Nenhum cliente cadastrado.') + '</td></tr>';
+  window.dados = lista;
+}
+
+function abrir(c) {
+  editando = c ? c.id : null;
+  document.getElementById('titulo').textContent = c ? 'Editar cliente' : 'Novo cliente';
+  nome.value = c ? c.nome : ''; cpf.value = ''; telefone.value = c ? c.telefone : ''; email.value = c ? c.email || '' : '';
+  document.getElementById('dicaCpf').textContent = c ? 'Deixe em branco para manter o CPF atual (' + c.cpf + ').' : '';
+  document.getElementById('erro').textContent = '';
+  dlg.showModal();
+}
+
+if (iniciar('clientes.html')) {
+  carregar().catch((e) => aviso(e.message, true));
+  document.getElementById('novo').onclick = () => abrir(null);
+  document.getElementById('cancelar').onclick = () => dlg.close();
+  document.getElementById('busca').onsubmit = (e) => { e.preventDefault(); termo = q.value.trim(); carregar(); };
+  document.getElementById('limpar').onclick = () => { q.value = ''; termo = ''; carregar(); };
+  document.getElementById('lista').onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.e) abrir(window.dados.find((c) => c.id == b.dataset.e));
+    if (b.dataset.x && confirm('Excluir este cliente?')) {
+      try { await api('/api/clientes/' + b.dataset.x, 'DELETE'); aviso('Cliente excluído.'); carregar(); } catch (err) { aviso(err.message, true); }
+    }
+  };
+  document.getElementById('form').onsubmit = async (e) => {
+    e.preventDefault();
+    const corpo = { nome: nome.value, cpf: cpf.value, telefone: telefone.value, email: email.value };
+    try {
+      await api(editando ? '/api/clientes/' + editando : '/api/clientes', editando ? 'PUT' : 'POST', corpo);
+      dlg.close(); aviso('Cliente salvo.'); carregar();
+    } catch (err) { document.getElementById('erro').textContent = err.message; }
+  };
+}
+</script>
+</body>
+</html>

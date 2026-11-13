@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><title>Entrar — Barbearia da Cacau</title></head>
+<body>
+<div class="login">
+  <section class="login-lado">
+    <span class="pole" aria-hidden="true"></span>
+    <h1>Barbearia da Cacau</h1>
+    <div>
+      <p>Agenda, clientes e barbeiros organizados em um só lugar.</p>
+      <small>Acesso restrito à equipe.</small>
+    </div>
+  </section>
+  <section class="login-form-area">
+    <form class="login-form" id="form" novalidate>
+      <h2>Entrar no sistema</h2>
+      <p class="sub">Use o e-mail e a senha cadastrados.</p>
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required autofocus>
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" required>
+      <div class="msg-erro" id="erro" role="alert"></div>
+      <button class="btn largo" type="submit">Entrar</button>
+    </form>
+  </section>
+</div>
+<script src="app.js"></script>
+<script>
+if (sessionStorage.getItem('token')) location.href = 'index.html';
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const erro = document.getElementById('erro');
+  erro.textContent = '';
+  try {
+    const d = await api('/api/login', 'POST', { email: email.value, senha: senha.value });
+    sessionStorage.setItem('token', d.token);
+    sessionStorage.setItem('nome', d.nome);
+    location.href = 'index.html';
+  } catch (err) { erro.textContent = err.message; }
+});
+</script>
+</body>
+</html>

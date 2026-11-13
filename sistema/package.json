@@ -1,0 +1,16 @@
+{
+  "name": "barbearia-da-cacau",
+  "version": "1.0.0",
+  "description": "Sistema de gestão e agendamento da Barbearia da Cacau",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node gerar_seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  }
+}

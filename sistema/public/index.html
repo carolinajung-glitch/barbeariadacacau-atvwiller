@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><title>Painel — Barbearia da Cacau</title></head>
+<body>
+<div class="layout">
+  <aside class="menu" id="menu"></aside>
+  <main>
+    <div class="topo"><div><h1 id="ola">Olá</h1><p>Veja como está o movimento da barbearia.</p></div></div>
+    <div class="numeros" id="numeros"></div>
+    <section class="painel">
+      <h2>Próximos atendimentos</h2>
+      <div class="rolagem"><table>
+        <thead><tr><th>Quando</th><th>Cliente</th><th>Serviço</th><th>Barbeiro</th></tr></thead>
+        <tbody id="proximos"></tbody>
+      </table></div>
+    </section>
+    <div class="atalhos">
+      <a class="btn" href="agendamentos.html">Novo agendamento</a>
+      <a class="btn sec" href="clientes.html">Cadastrar cliente</a>
+    </div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+if (iniciar('index.html')) (async () => {
+  document.getElementById('ola').textContent = 'Olá, ' + sessionStorage.getItem('nome');
+  const r = await api('/api/resumo');
+  document.getElementById('numeros').innerHTML = [
+    [r.agendados, 'atendimentos agendados'], [r.clientes, 'clientes'], [r.barbeiros, 'barbeiros'], [r.servicos, 'serviços'],
+  ].map(([n, t]) => '<div class="numero"><b>' + n + '</b><span>' + t + '</span></div>').join('');
+  const ag = (await api('/api/agendamentos')).filter((a) => a.status === 'Agendado').slice(0, 5);
+  document.getElementById('proximos').innerHTML = ag.length
+    ? ag.map((a) => '<tr><td><span class="dia">' + esc(dataBR(a.data)) + '</span><span class="sub-linha">' + a.hora + '</span></td><td>' +
+        esc(a.cliente) + '</td><td>' + esc(a.servico) + '</td><td>' + esc(a.barbeiro) + '</td></tr>').join('')
+    : '<tr><td colspan="4" class="vazio">Nenhum atendimento agendado.</td></tr>';
+})().catch((e) => aviso(e.message, true));
+</script>
+</body>
+</html>
